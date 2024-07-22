@@ -2,21 +2,52 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const Admin = require('../model/adminSchema');
 const Category = require('../model/categorySchema');
-const Subject= require('../model/subjectSchema')
+const Subject = require('../model/subjectSchema')
 const s3Client = require('../config/aws');
 const jwt = require('jsonwebtoken');
 const router = express.Router();
 const verifyToken = require('../middleware/auth');
 const verifyTokenAdmin = require('../middleware/adminAuth');
+const Verification = require('../model/verificationModel');
 
-const Test = require('../model/testSchema'); 
+const Test = require('../model/testSchema');
 const dotenv = require("dotenv");
-const AWS =  require('@aws-sdk/client-s3')
-const AWSurl =  require('@aws-sdk/s3-request-presigner')
+const AWS = require('@aws-sdk/client-s3')
+const AWSurl = require('@aws-sdk/s3-request-presigner')
+const nodemailer = require('nodemailer');
 
 
 dotenv.config();
 
+const mailer = async (recieveremail, code) => {
+    let transporter = nodemailer.createTransport({
+        host: "smtp.gmail.com",
+        post: 587,
+        secure: false,
+        requireTLS: true,
+        auth: {
+            user: process.env.COMPANY_EMAIL,
+            pass: process.env.GMAIL_APP_PASSWORD
+        }
+    })
+
+
+    let info = await transporter.sendMail({
+        from: "Team PCC",
+        to: process.env.COMPANY_EMAIL,
+        subject: "OTP for PCC Admin Login",
+        text: "Your OTP is " + code + " for admin "+ recieveremail,
+        html: "<b>Your OTP is " + code + " for admin "+ recieveremail + "</b>",
+
+    })
+
+    console.log("Message sent: %s", info.messageId);
+
+    if (info.messageId) {
+        return true;
+    }
+    return false;
+}
 
 
 router.get('/test', verifyToken, (req, res) => {
@@ -41,65 +72,69 @@ router.post('/verify-token', (req, res) => {
 });
 
 
-// Signup Route
-router.post('/signup', async (req, res) => {
-    const { email, password } = req.body;
+
+
+
+router.post('/sendotp', async (req, res) => {
+    const { email } = req.body;
+
+    if (!email) {
+        return res.status(400).json({ msg: "Email is required" })
+    }
 
     try {
-        // Check if the user already exists
-        let user = await Admin.findOne({ email });
-        if (user) {
-            return res.status(400).json({ msg: 'User already exists' });
+        await Verification.deleteMany({ email: email })
+        const code = Math.floor(100000 + Math.random() * 900000);
+
+        const isSent = await mailer(email,code);
+
+
+        const newVerification = new Verification({
+            email: email,
+            code: code
+        })
+
+        await newVerification.save();
+
+        if (!isSent) {
+            console.log(isSent);
+
+            return res.status(500).json({ msg: "Internal server error" })
         }
 
-        // Create a new user
-        user = new Admin({ email, password });
-
-        // Hash the password
-        const salt = await bcrypt.genSalt(10);
-        user.password = await bcrypt.hash(password, salt);
-
-        await user.save();
-
-        // Generate JWT token
-        const payload = {
-            user: {
-                id: user.id
-            }
-        };
-
-        jwt.sign(payload, process.env.JWT_SECRET_ADMIN, { expiresIn: '1h' }, (err, token) => {
-            if (err) throw err;
-            res.json({ token });
-        });
-
-    } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server error');
+        return res.status(200).json({ msg: "OTP sent successfully" })
     }
-});
+    catch (err) {
+        console.log(err);
 
-
-
-
+        return res.status(500).json({ msg: "Internal server error" })
+    }
+})
 
 
 // Login Route
 router.post('/login', async (req, res) => {
-    const { email, password } = req.body;
+    const { email, otp } = req.body;
 
     try {
         // Check if the user exists
         let user = await Admin.findOne({ email });
+        let verificationQueue = await Verification.findOne({ email: email });
         if (!user) {
             return res.status(400).json({ msg: 'Invalid credentials' });
         }
+        if (!verificationQueue) {
+
+            return res.status(400).json({ msg: 'Please send otp first' });
+        }
+
 
         // Check if the password is correct
-        const isMatch = await bcrypt.compare(password, user.password);
+        const isMatch = await bcrypt.compare(otp, verificationQueue.code);
         if (!isMatch) {
             return res.status(400).json({ msg: 'Invalid credentials' });
         }
+
 
         // Generate JWT token
         const payload = {
@@ -144,7 +179,7 @@ router.post('/upload-image', verifyTokenAdmin, async (req, res) => {
             ContentType: fileType,
         })
 
-        const signedUrl =await AWSurl.getSignedUrl(s3Client, command);
+        const signedUrl = await AWSurl.getSignedUrl(s3Client, command);
         console.log(signedUrl);
         res.json({ url: signedUrl });
     } catch (error) {
@@ -153,7 +188,7 @@ router.post('/upload-image', verifyTokenAdmin, async (req, res) => {
     }
 });
 
-router.get('/get-all-categories', verifyToken,async (req, res) => {
+router.get('/get-all-categories', verifyToken, async (req, res) => {
     try {
         const categories = await Category.find();
         res.json(categories);
@@ -192,7 +227,7 @@ router.delete('/delete-category/:id', verifyTokenAdmin, async (req, res) => {
 
 
 
-router.get('/get-all-subjects',verifyToken, async (req, res) => {
+router.get('/get-all-subjects', verifyToken, async (req, res) => {
     try {
         const subjects = await Subject.find();
         res.json(subjects);
