@@ -34,12 +34,41 @@ const mailer = async (recieveremail, code) => {
     let info = await transporter.sendMail({
         from: "Team PCC",
         to: recieveremail,
-        subject: "OTP for PCC",
-        text: "Your OTP is " + code,
-        html: "<b>Your OTP is " + code + "</b>",
-
-    })
-
+        subject: "Welcome to Enzyme by Padma Chemistry Classes Mock Tests!",
+        text: `
+            Dear user,
+    
+            Thank you for choosing Enzyme by Padma Chemistry Classes for your mock test needs. We are thrilled to have you on board!
+    
+            To complete your registration, please use the following OTP (One-Time Password):
+            OTP: ${code}
+    
+            Your journey towards mastering chemistry just got easier with Enzyme. Access our wide range of mock tests designed to boost your competitive exam preparations.
+    
+            If you have any questions or need assistance, feel free to reach out to our support team at +919826333040.
+    
+            Happy learning!
+    
+            Best regards,
+            
+            Enzyme by Padma Chemistry Classes
+            https://www.enzymebypcc.in/
+            +919826333040
+        `,
+        html: `
+            <p>Dear user,</p>
+            <p>Thank you for choosing Enzyme by Padma Chemistry Classes for your mock test needs. We are thrilled to have you on board!</p>
+            <p>To complete your registration, please use the following OTP (One-Time Password):</p>
+            <p><b>OTP: ${code}</b></p>
+            <p>Your journey towards mastering chemistry just got easier with Enzyme. Access our wide range of mock tests designed to boost your competitive exam preparations.</p>
+            <p>If you have any questions or need assistance, feel free to reach out to our support team at +919826333040.</p>
+            <p>Happy learning!</p>
+            <p>Best regards,</p>
+            <p>Enzyme by Padma Chemistry Classes</p>
+            <p>https://www.enzymebypcc.in/</p>
+            <p>+919826333040</p>
+        `
+    });
     console.log("Message sent: %s", info.messageId);
 
     if (info.messageId) {
@@ -305,7 +334,9 @@ router.get('/get-user-data', verifyToken, async (req, res) => {
 
 
 router.post('/savetesttouser', verifyToken, async (req, res) => {
-    const { testId, answers, timeStarted, marks, totalMarks } = req.body;
+    const { testId, answers, timeStarted,timeSubmited, marks, totalMarks } = req.body;
+
+    console.log('savetesttouser ',req.body);
     try {
         // Find the user by ID from the decoded token
         const user = await User.findById(req.user.id);
@@ -313,8 +344,7 @@ router.post('/savetesttouser', verifyToken, async (req, res) => {
         if (!user) {
             return res.status(404).json({ msg: 'User not found' });
         }
-        const timeSubmited = new Date().toISOString();
-
+      
         // Add the test data to the user's record
         user.tests.push({ testId, answers, timeStarted, timeSubmited, marks, totalMarks });
         const savedUser = await user.save();

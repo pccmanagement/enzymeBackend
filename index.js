@@ -8,7 +8,7 @@ const testRoutes = require("./routes/test")
 const newsBulletinRoutes = require('./routes/newsBulletin');
 const subscriptionRoutes = require('./routes/subscription');
 const platformFeeRoutes = require('./routes/platformFee');
-
+const homePosterRoutes = require('./routes/homePoster');
 
 const bodyParser = require("body-parser");
 
@@ -42,7 +42,7 @@ app.use('/api/test', testRoutes);
 app.use('/api/newsBulletin', newsBulletinRoutes);
 app.use('/api/subscription', subscriptionRoutes);
 app.use('/api/platform-fee', platformFeeRoutes);
-
+app.use('/api/home-poster', homePosterRoutes);
 
 // Listening App
 const port = process.env.PORT || 5000;

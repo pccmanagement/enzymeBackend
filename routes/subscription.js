@@ -25,14 +25,18 @@ router.get('/test', verifyToken, (req, res) => {
 });
 
 
-router.post("/createorder",verifyToken, checkPromoCode, async (req, res) => {
+router.post("/createorder", verifyToken, checkPromoCode, async (req, res) => {
 
-    const { amount, currency,promocode } = req.body;
-    const discount = req.discount;
+    let { amount, currency, promocode } = req.body;
+    amount = JSON.parse(amount);
 
+    let discount = req.discount;
+    discount = JSON.parse(discount);
+
+    totalAmountinRS = Math.round((amount - (amount * discount / 100)))
 
     const options = {
-        amount: (amount - (amount*discount/100)) * 100, // Amount in paise
+        amount:  totalAmountinRS * 100, // Amount in paise
         currency
     };
 
@@ -41,7 +45,8 @@ router.post("/createorder",verifyToken, checkPromoCode, async (req, res) => {
         const order = await razorpay.orders.create(options);
         res.json(order);
     }
-    catch(error){
+    catch (error) {
+        console.log(error)
         res.status(500).send(error);
 
     }
@@ -146,7 +151,7 @@ router.post('/checksubscription', verifyToken, async (req, res) => {
 });
 
 
-router.get('/latest-subscriptions', verifyTokenAdmin ,async (req, res) => {
+router.get('/latest-subscriptions', verifyTokenAdmin, async (req, res) => {
     try {
         const subscriptions = await Subscription.find()
             .sort({ createdAt: -1 }) // Sort by creation date, descending
@@ -160,7 +165,7 @@ router.get('/latest-subscriptions', verifyTokenAdmin ,async (req, res) => {
 });
 
 
-router.get('/subscription-by-email/:email', verifyTokenAdmin ,async (req, res) => {
+router.get('/subscription-by-email/:email', verifyTokenAdmin, async (req, res) => {
     try {
         const { email } = req.params;
 
@@ -222,7 +227,7 @@ router.delete('/promocode/:id', verifyTokenAdmin, async (req, res) => {
 
 
 // GET - Retrieve discount by promo code name
-router.get('/promocode/discount/:code', verifyToken,async (req, res) => {
+router.get('/promocode/discount/:code', verifyToken, async (req, res) => {
     try {
         const promoCode = await PromoCode.findOne({ code: req.params.code });
 

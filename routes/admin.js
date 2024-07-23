@@ -143,7 +143,7 @@ router.post('/login', async (req, res) => {
             }
         };
 
-        jwt.sign(payload, process.env.JWT_SECRET_ADMIN, { expiresIn: '1h' }, (err, token) => {
+        jwt.sign(payload, process.env.JWT_SECRET_ADMIN, { expiresIn: '1d' }, (err, token) => {
             if (err) throw err;
             res.json({ token });
         });
@@ -159,20 +159,10 @@ router.post('/login', async (req, res) => {
 router.post('/upload-image', verifyTokenAdmin, async (req, res) => {
     const { fileName, fileType } = req.body;
 
-    // const s3Params = {
-    //     Bucket: process.env.AWS_S3_BUCKET,
-    //     Key: fileName,
-    //     Expires: 60,
-    //     ContentType: fileType,
-    //     ACL: 'public-read',
-    // };
+  
 
     try {
-        // const signedUrl = await s3.getSignedUrlPromise('putObject', s3Params);
-        // console.log(signedUrl);
-        // res.json({ url: signedUrl });
-
-
+  
         const command = await new AWS.PutObjectCommand({
             Bucket: process.env.AWS_S3_BUCKET,
             Key: fileName,
@@ -180,7 +170,7 @@ router.post('/upload-image', verifyTokenAdmin, async (req, res) => {
         })
 
         const signedUrl = await AWSurl.getSignedUrl(s3Client, command);
-        console.log(signedUrl);
+        // console.log(signedUrl);
         res.json({ url: signedUrl });
     } catch (error) {
         console.error(error);
