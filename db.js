@@ -10,7 +10,7 @@ mongoose.connect(MONGO_URL, {
     dbName: DB_NAME
 }).then(
     () => {
-        console.log('Connected to database');
+        console.log('Connected to database ',MONGO_URL);
     }
 ).catch((err) => {
     console.log('Error connecting to database ' + err);
